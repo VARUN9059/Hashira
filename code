@@ -1,0 +1,84 @@
+import java.math.BigInteger;
+import java.util.*;
+import java.util.regex.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        StringBuilder sb = new StringBuilder();
+        while (sc.hasNextLine()) {
+            sb.append(sc.nextLine());
+        }
+        sc.close();
+
+        String json = sb.toString();
+
+        // Extract n and k
+        int n = Integer.parseInt(matchFirst(json, "\"n\"\\s*:\\s*(\\d+)"));
+        int k = Integer.parseInt(matchFirst(json, "\"k\"\\s*:\\s*(\\d+)"));
+
+        List<BigInteger> roots = new ArrayList<>();
+
+        // Loop through possible keys 1..n
+        for (int i = 1; i <= n; i++) {
+            String keyPattern = "\"" + i + "\"\\s*:\\s*\\{([^}]*)\\}";
+            String block = matchFirst(json, keyPattern);
+            if (block == null) continue;
+
+            String baseStr = matchFirst(block, "\"base\"\\s*:\\s*\"(\\d+)\"");
+            String valueStr = matchFirst(block, "\"value\"\\s*:\\s*\"([^\"]+)\"");
+
+            if (baseStr == null || valueStr == null) continue;
+
+            int base = Integer.parseInt(baseStr);
+
+            // Validate the value for the given base
+            if (!isValidForBase(valueStr.toLowerCase(), base)) {
+                System.out.println("Skipping invalid value for base " + base + ": " + valueStr);
+                continue;
+            }
+
+            try {
+                BigInteger num = new BigInteger(valueStr, base);
+                roots.add(num);
+            } catch (Exception e) {
+                System.out.println("Error parsing value: " + valueStr + " in base " + base);
+            }
+        }
+
+        if (roots.size() < k) {
+            System.out.println("Not enough valid roots.");
+            return;
+        }
+
+        BigInteger product = BigInteger.ONE;
+        for (int i = 0; i < k; i++) {
+            product = product.multiply(roots.get(i));
+        }
+
+        if (k % 2 != 0) product = product.negate();
+
+        System.out.println(product);
+    }
+
+    // Helper method to extract first regex group match
+    private static String matchFirst(String text, String regex) {
+        Pattern p = Pattern.compile(regex);
+        Matcher m = p.matcher(text);
+        if (m.find()) {
+            return m.group(1);
+        }
+        return null;
+    }
+
+    // Validate if a number string is valid for a given base
+    private static boolean isValidForBase(String value, int base) {
+        String validChars;
+        if (base <= 10) {
+            validChars = "0-" + (base - 1);
+        } else {
+            validChars = "0-9a-" + (char) ('a' + base - 11);
+        }
+        return value.matches("[" + validChars + "]+");
+    }
+}
